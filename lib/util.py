@@ -1,4 +1,4 @@
-from urllib import FancyURLopener
+import urllib2
 
 import commands
 import logging
@@ -445,14 +445,8 @@ def unzip_file(filePath, newLocation):
 def progress_reporter(s):
     log.debug(s)
 
-class URLOpener(FancyURLopener):
-    def http_error_default(self, url, fp, errcode, errmsg, headers):
-        msg = 'ERROR: Could not download %s\nIs the URL valid?' % url
-        raise IOError, msg
-
 def download_file(URL, dest_dir, local_file, num_retries = 4):
     log.info('Downloading %s' % URL)
-    url_opener = URLOpener()
     localFP = os.path.join(dest_dir, local_file)
     tmpDownloadFP = '%s.part' % localFP
     progress_reporter('Starting %s download' % local_file)
@@ -462,11 +456,12 @@ def download_file(URL, dest_dir, local_file, num_retries = 4):
     rc = 1
     while download_failed > 0:
         try:
-            tmpLocalFP, headers = url_opener.retrieve(URL, \
-                                                      tmpDownloadFP)
+            download=urllib2.urlopen(URL)
+            with open(tmpDownloadFP,'wb') as output:
+                output.write(download.read())
             os.rename(tmpDownloadFP, localFP)
             rc = 0
-        except IOError, msg:
+        except urllib2.URLError:
             if download_failed == 1:
                 progress_reporter('Download of %s failed.' % URL)
             else:
